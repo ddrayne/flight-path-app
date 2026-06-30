@@ -843,9 +843,10 @@ function runPTFS(points, totalKm, fromCode, toCode) {
   let trailCoords = [];
   let progress = 0;
   let lastTime = null;
-  let lastPanTime = 0;
   let lastHdg = 0;
   let frameCount = 0;
+  let camLat = points[0][0];
+  let camLon = points[0][1];
   const totalNm = totalKm * 0.539957;
 
   const flightDurationSec = 60;
@@ -887,10 +888,10 @@ function runPTFS(points, totalKm, fromCode, toCode) {
       }
     }
 
-    if (now - lastPanTime > 400) {
-      map.panTo([lat, lon], { animate: false });
-      lastPanTime = now;
-    }
+    const smooth = 0.15;
+    camLat += (lat - camLat) * smooth;
+    camLon += (lon - camLon) * smooth;
+    map.setView([camLat, camLon], map.getZoom(), { animate: false });
 
     const phase = getFlightPhase(progress);
     const alt = getAltitude(progress);
