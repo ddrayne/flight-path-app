@@ -1188,22 +1188,21 @@ function init3D(canvas, routePoints) {
   sun.position.set(100, 200, 50);
   scene.add(sun);
 
-  // Ocean
-  const oceanGeo = new THREE.PlaneGeometry(2000, 2000, 60, 60);
+  // Ocean - bright enough to actually see
+  const oceanGeo = new THREE.PlaneGeometry(4000, 4000, 1, 1);
   const oceanMat = new THREE.MeshPhongMaterial({
-    color: 0x0a2a4a,
-    shininess: 80,
-    transparent: true,
-    opacity: 0.9
+    color: 0x1a5276,
+    shininess: 60,
+    specular: 0x2980b9
   });
   const ocean = new THREE.Mesh(oceanGeo, oceanMat);
   ocean.rotation.x = -Math.PI / 2;
-  ocean.position.y = 0;
+  ocean.position.y = -0.5;
   scene.add(ocean);
 
-  // Grid on ocean
-  const grid = new THREE.GridHelper(2000, 80, 0x0f3460, 0x0f3460);
-  grid.position.y = 0.1;
+  // Grid on ocean - visible lines
+  const grid = new THREE.GridHelper(4000, 100, 0x1a6a8a, 0x14506a);
+  grid.position.y = 0;
   scene.add(grid);
 
   // Build 3D path from route points
@@ -1433,25 +1432,20 @@ function init3D(canvas, routePoints) {
     planeGroup.position.copy(curvePoint);
     planeGroup.position.y += pitchInput * 3;
     planeGroup.lookAt(lookAhead);
-    planeGroup.rotation.z = -rollInput * 0.5;
 
-    // Camera chase
-    const camBack = dir.clone().multiplyScalar(-25);
-    camBack.y += 8;
+    // Apply roll after lookAt using quaternion multiply
+    const rollQuat = new THREE.Quaternion();
+    rollQuat.setFromAxisAngle(dir, -rollInput * 0.5);
+    planeGroup.quaternion.multiply(rollQuat);
+
+    // Camera chase - faster lerp for responsive feel
+    const camBack = dir.clone().multiplyScalar(-20);
+    camBack.y += 6;
     const camTarget = new THREE.Vector3().addVectors(planeGroup.position, camBack);
-    camera.position.lerp(camTarget, 0.06);
-    const lookTarget = new THREE.Vector3().addVectors(planeGroup.position, dir.clone().multiplyScalar(15));
-    lookTarget.y += 1;
+    camera.position.lerp(camTarget, 0.12);
+    const lookTarget = new THREE.Vector3().addVectors(planeGroup.position, dir.clone().multiplyScalar(10));
+    lookTarget.y += 0.5;
     camera.lookAt(lookTarget);
-
-    // Animate ocean
-    const verts = oceanGeo.attributes.position;
-    for (let i = 0; i < verts.count; i++) {
-      const x = verts.getX(i);
-      const z = verts.getZ(i);
-      verts.setY(i, Math.sin(x * 0.03 + now * 0.001) * 0.3 + Math.cos(z * 0.04 + now * 0.0012) * 0.2);
-    }
-    verts.needsUpdate = true;
 
     // Move ocean/grid with plane so it's always around
     ocean.position.x = planeGroup.position.x;
