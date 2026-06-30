@@ -344,7 +344,25 @@ body {
     </div>
   </div>
   <button class="fly-btn" id="fly-btn">FLY</button>
+  <button class="fly-btn" id="fly3d-btn" style="display:none; background:linear-gradient(135deg,#e040fb,#ff6b35);">3D FLY</button>
   <button class="mode-btn" id="mode-btn">PTFS MODE</button>
+</div>
+
+<div id="flight3d-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:2000; background:#000;">
+  <canvas id="flight3d-canvas" style="width:100%; height:100%;"></canvas>
+  <div id="flight3d-hud" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(10,10,26,0.9); border:2px solid #0f3460; border-radius:12px; padding:12px 20px; display:flex; gap:20px; align-items:center; font-family:monospace;">
+    <div style="text-align:center"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;">Speed</div><div style="font-size:20px;font-weight:800;color:#00ff88;" id="hud3d-speed">0</div></div>
+    <div style="width:1px;height:36px;background:#0f3460;"></div>
+    <div style="text-align:center"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;">Alt</div><div style="font-size:20px;font-weight:800;color:#00ff88;" id="hud3d-alt">0</div></div>
+    <div style="width:1px;height:36px;background:#0f3460;"></div>
+    <div style="text-align:center"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;">Progress</div><div style="font-size:20px;font-weight:800;color:#00d2ff;" id="hud3d-pct">0%</div></div>
+    <div style="width:1px;height:36px;background:#0f3460;"></div>
+    <div style="text-align:center"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;">Phase</div><div style="font-size:14px;font-weight:700;color:#f7c948;" id="hud3d-phase">READY</div></div>
+  </div>
+  <button id="flight3d-close" style="position:absolute;top:16px;right:16px;background:rgba(255,71,87,0.9);border:none;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;z-index:2001;">EXIT 3D</button>
+  <div id="flight3d-controls" style="position:absolute;top:16px;left:16px;color:#888;font-size:12px;font-family:sans-serif;background:rgba(10,10,26,0.8);padding:8px 12px;border-radius:8px;">
+    W/S or ↑/↓ — Pitch &nbsp; A/D or ←/→ — Roll &nbsp; Q/E — Throttle
+  </div>
 </div>
 
 <div id="map"></div>
@@ -1002,11 +1020,14 @@ function fly() {
   map.fitBounds(bounds, { padding: [50, 50] });
 
   if (ptfsMode) {
+    current3DPoints = points;
+    document.getElementById('fly3d-btn').style.display = '';
     setTimeout(() => {
       map.setView([from.lat, from.lon], 5, { animate: false });
       runPTFS(points, km, fromCode, toCode);
     }, 400);
   } else {
+    document.getElementById('fly3d-btn').style.display = 'none';
     const midIdx = Math.floor(points.length / 2);
     L.marker(points[midIdx], { icon: createRotatedPlaneIcon(bearing(points[midIdx][0], points[midIdx][1], points[midIdx+1][0], points[midIdx+1][1])) }).addTo(flightLayer);
   }
@@ -1092,6 +1113,282 @@ document.addEventListener('keydown', (e) => {
     fly();
   }
 });
+
+// === 3D FLIGHT MODE ===
+let current3DPoints = null;
+let flight3DActive = false;
+let anim3DId = null;
+
+const origFly = fly;
+
+document.getElementById('fly3d-btn').addEventListener('click', () => {
+  if (!current3DPoints || current3DPoints.length < 2) return;
+  launch3DFlight(current3DPoints);
+});
+
+document.getElementById('flight3d-close').addEventListener('click', () => {
+  close3DFlight();
+});
+
+function close3DFlight() {
+  flight3DActive = false;
+  if (anim3DId) cancelAnimationFrame(anim3DId);
+  anim3DId = null;
+  document.getElementById('flight3d-overlay').style.display = 'none';
+}
+
+function launch3DFlight(routePoints) {
+  const overlay = document.getElementById('flight3d-overlay');
+  overlay.style.display = 'block';
+  flight3DActive = true;
+
+  const canvas = document.getElementById('flight3d-canvas');
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/three@0.160.0/build/three.min.js';
+  script.onload = () => init3D(canvas, routePoints);
+  if (window.THREE) {
+    init3D(canvas, routePoints);
+  } else {
+    document.head.appendChild(script);
+  }
+}
+
+function init3D(canvas, routePoints) {
+  const THREE = window.THREE;
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(W, H);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setClearColor(0x0a1628);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x0a1628, 200, 800);
+
+  const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 2000);
+
+  const ambient = new THREE.AmbientLight(0x4466aa, 0.6);
+  scene.add(ambient);
+  const sun = new THREE.DirectionalLight(0xffeedd, 1.2);
+  sun.position.set(100, 200, 50);
+  scene.add(sun);
+
+  // Ocean
+  const oceanGeo = new THREE.PlaneGeometry(2000, 2000, 60, 60);
+  const oceanMat = new THREE.MeshPhongMaterial({
+    color: 0x0a2a4a,
+    shininess: 80,
+    transparent: true,
+    opacity: 0.9
+  });
+  const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+  ocean.rotation.x = -Math.PI / 2;
+  ocean.position.y = 0;
+  scene.add(ocean);
+
+  // Grid on ocean
+  const grid = new THREE.GridHelper(2000, 80, 0x0f3460, 0x0f3460);
+  grid.position.y = 0.1;
+  scene.add(grid);
+
+  // Build 3D path from route points
+  const pathScale = 3;
+  const path3D = routePoints.map((p, i) => {
+    const x = (p[1] - routePoints[0][1]) * pathScale;
+    const z = -(p[0] - routePoints[0][0]) * pathScale;
+    const t = i / (routePoints.length - 1);
+    const alt = getAltitude(t) / 500;
+    return new THREE.Vector3(x, alt, z);
+  });
+
+  // Path line
+  const pathCurve = new THREE.CatmullRomCurve3(path3D);
+  const pathGeo = new THREE.TubeGeometry(pathCurve, 200, 0.15, 8, false);
+  const pathMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.4 });
+  scene.add(new THREE.Mesh(pathGeo, pathMat));
+
+  // Plane model (simple shape)
+  const planeGroup = new THREE.Group();
+
+  // Fuselage
+  const fuselageGeo = new THREE.CylinderGeometry(0.3, 0.2, 3, 8);
+  const planeMat = new THREE.MeshPhongMaterial({ color: 0xdddddd, shininess: 100 });
+  const fuselage = new THREE.Mesh(fuselageGeo, planeMat);
+  fuselage.rotation.z = Math.PI / 2;
+  planeGroup.add(fuselage);
+
+  // Wings
+  const wingGeo = new THREE.BoxGeometry(5, 0.08, 0.8);
+  const wingMat = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+  const wings = new THREE.Mesh(wingGeo, wingMat);
+  wings.position.y = 0;
+  planeGroup.add(wings);
+
+  // Tail fin
+  const tailGeo = new THREE.BoxGeometry(0.08, 1, 0.6);
+  const tail = new THREE.Mesh(tailGeo, wingMat);
+  tail.position.set(0, 0.5, -1.2);
+  planeGroup.add(tail);
+
+  // Tail wings
+  const tailWingGeo = new THREE.BoxGeometry(1.8, 0.06, 0.4);
+  const tailWings = new THREE.Mesh(tailWingGeo, wingMat);
+  tailWings.position.set(0, 0, -1.2);
+  planeGroup.add(tailWings);
+
+  // Engines
+  const engGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.8, 8);
+  const engMat = new THREE.MeshPhongMaterial({ color: 0x666666 });
+  const eng1 = new THREE.Mesh(engGeo, engMat);
+  eng1.rotation.z = Math.PI / 2;
+  eng1.position.set(-1.2, -0.2, 0.2);
+  planeGroup.add(eng1);
+  const eng2 = eng1.clone();
+  eng2.position.set(1.2, -0.2, 0.2);
+  planeGroup.add(eng2);
+
+  planeGroup.scale.set(0.8, 0.8, 0.8);
+  scene.add(planeGroup);
+
+  // Contrails
+  const trailMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
+  const maxTrailLen = 200;
+  const trailPoints1 = [];
+  const trailPoints2 = [];
+
+  // Departure/arrival markers
+  const markerGeo = new THREE.CylinderGeometry(1, 1, 0.3, 16);
+  const depMat = new THREE.MeshPhongMaterial({ color: 0x00d2ff, emissive: 0x004466 });
+  const arrMat = new THREE.MeshPhongMaterial({ color: 0x00e676, emissive: 0x004422 });
+  const depMarker = new THREE.Mesh(markerGeo, depMat);
+  depMarker.position.copy(path3D[0]);
+  depMarker.position.y = 0.2;
+  scene.add(depMarker);
+  const arrMarker = new THREE.Mesh(markerGeo, arrMat);
+  arrMarker.position.copy(path3D[path3D.length - 1]);
+  arrMarker.position.y = 0.2;
+  scene.add(arrMarker);
+
+  // Stars
+  const starGeo = new THREE.BufferGeometry();
+  const starVerts = [];
+  for (let i = 0; i < 2000; i++) {
+    starVerts.push((Math.random() - 0.5) * 1600, Math.random() * 400 + 100, (Math.random() - 0.5) * 1600);
+  }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVerts, 3));
+  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5, transparent: true, opacity: 0.6 });
+  scene.add(new THREE.Points(starGeo, starMat));
+
+  // Flight state
+  let progress3D = 0;
+  let throttle = 1;
+  let pitchInput = 0;
+  let rollInput = 0;
+  let lastTime3D = null;
+
+  const keys = {};
+  const onKey = (e) => {
+    if (!flight3DActive) return;
+    keys[e.key.toLowerCase()] = e.type === 'keydown';
+    e.preventDefault();
+  };
+  window.addEventListener('keydown', onKey);
+  window.addEventListener('keyup', onKey);
+
+  function animate3D(now) {
+    if (!flight3DActive) {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKey);
+      renderer.dispose();
+      return;
+    }
+    anim3DId = requestAnimationFrame(animate3D);
+
+    if (lastTime3D === null) lastTime3D = now;
+    const dt = Math.min((now - lastTime3D) / 1000, 0.1);
+    lastTime3D = now;
+
+    // Input
+    if (keys['w'] || keys['arrowup']) pitchInput = Math.min(pitchInput + dt * 2, 1);
+    else if (keys['s'] || keys['arrowdown']) pitchInput = Math.max(pitchInput - dt * 2, -1);
+    else pitchInput *= 0.95;
+
+    if (keys['a'] || keys['arrowleft']) rollInput = Math.min(rollInput + dt * 2, 1);
+    else if (keys['d'] || keys['arrowright']) rollInput = Math.max(rollInput - dt * 2, -1);
+    else rollInput *= 0.95;
+
+    if (keys['e']) throttle = Math.min(throttle + dt, 3);
+    if (keys['q']) throttle = Math.max(throttle - dt, 0.2);
+
+    // Progress along path
+    progress3D = Math.min(progress3D + dt * throttle * 0.015, 1);
+    const t = progress3D;
+
+    // Get position on path
+    const curvePoint = pathCurve.getPointAt(t);
+    const lookAhead = pathCurve.getPointAt(Math.min(t + 0.01, 1));
+    const dir = new THREE.Vector3().subVectors(lookAhead, curvePoint).normalize();
+
+    // Position plane
+    planeGroup.position.copy(curvePoint);
+    planeGroup.position.y += pitchInput * 3;
+    planeGroup.lookAt(lookAhead);
+    planeGroup.rotation.z = -rollInput * 0.5;
+
+    // Camera chase
+    const camOffset = new THREE.Vector3();
+    camOffset.copy(dir).multiplyScalar(-12);
+    camOffset.y += 4;
+    const camTarget = new THREE.Vector3().addVectors(planeGroup.position, camOffset);
+    camera.position.lerp(camTarget, 0.08);
+    const lookTarget = new THREE.Vector3().addVectors(planeGroup.position, dir.multiplyScalar(10));
+    camera.lookAt(lookTarget);
+
+    // Animate ocean
+    const verts = oceanGeo.attributes.position;
+    for (let i = 0; i < verts.count; i++) {
+      const x = verts.getX(i);
+      const z = verts.getZ(i);
+      verts.setY(i, Math.sin(x * 0.03 + now * 0.001) * 0.3 + Math.cos(z * 0.04 + now * 0.0012) * 0.2);
+    }
+    verts.needsUpdate = true;
+
+    // Move ocean/grid with plane so it's always around
+    ocean.position.x = planeGroup.position.x;
+    ocean.position.z = planeGroup.position.z;
+    grid.position.x = planeGroup.position.x;
+    grid.position.z = planeGroup.position.z;
+
+    // HUD
+    const phase = getFlightPhase(t);
+    const alt = getAltitude(t);
+    const spd = getSpeed(t);
+    document.getElementById('hud3d-speed').textContent = Math.round(spd * throttle);
+    document.getElementById('hud3d-alt').textContent = alt.toLocaleString();
+    document.getElementById('hud3d-pct').textContent = Math.round(t * 100) + '%';
+    document.getElementById('hud3d-phase').textContent = phase.name;
+
+    if (t >= 1) {
+      document.getElementById('hud3d-phase').textContent = 'LANDED';
+      document.getElementById('hud3d-phase').style.color = '#00e676';
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  anim3DId = requestAnimationFrame(animate3D);
+
+  window.addEventListener('resize', () => {
+    if (!flight3DActive) return;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+}
 </script>
 </body>
 </html>
