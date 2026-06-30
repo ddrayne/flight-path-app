@@ -764,28 +764,47 @@ function runPTFS(points, totalKm, fromCode, toCode) {
   animationId = requestAnimationFrame(animate);
 }
 
+function resolveAirport(input) {
+  const val = input.toUpperCase();
+  if (AIRPORTS[val]) return { code: val, data: AIRPORTS[val] };
+  for (const [code, data] of Object.entries(AIRPORTS)) {
+    if (code.includes(val)) return { code, data };
+  }
+  for (const [code, data] of Object.entries(AIRPORTS)) {
+    if (data.city.toUpperCase().includes(val) || data.name.toUpperCase().includes(val)) return { code, data };
+  }
+  return null;
+}
+
 function fly() {
   stopAnimation();
 
-  const fromCode = document.getElementById('from').value.trim().toUpperCase();
-  const toCode = document.getElementById('to').value.trim().toUpperCase();
+  const fromInput = document.getElementById('from').value.trim().toUpperCase();
+  const toInput = document.getElementById('to').value.trim().toUpperCase();
 
-  if (!fromCode || !toCode) {
+  if (!fromInput || !toInput) {
     document.getElementById('info-bar').innerHTML = '<span class="error-msg">Enter both airport codes</span>';
     return;
   }
 
-  const from = AIRPORTS[fromCode];
-  const to = AIRPORTS[toCode];
+  const fromResult = resolveAirport(fromInput);
+  const toResult = resolveAirport(toInput);
 
-  if (!from) {
-    document.getElementById('info-bar').innerHTML = `<span class="error-msg">Unknown airport: ${fromCode}</span>`;
+  if (!fromResult) {
+    document.getElementById('info-bar').innerHTML = `<span class="error-msg">Unknown airport: ${fromInput}</span>`;
     return;
   }
-  if (!to) {
-    document.getElementById('info-bar').innerHTML = `<span class="error-msg">Unknown airport: ${toCode}</span>`;
+  if (!toResult) {
+    document.getElementById('info-bar').innerHTML = `<span class="error-msg">Unknown airport: ${toInput}</span>`;
     return;
   }
+
+  const fromCode = fromResult.code;
+  const toCode = toResult.code;
+  const from = fromResult.data;
+  const to = toResult.data;
+  document.getElementById('from').value = fromCode;
+  document.getElementById('to').value = toCode;
 
   currentFromCode = fromCode;
   currentToCode = toCode;
