@@ -301,10 +301,10 @@ body {
   </div>
   <div class="speed-controls">
     <button class="speed-btn" data-speed="1">1x</button>
+    <button class="speed-btn" data-speed="2">2x</button>
     <button class="speed-btn active" data-speed="5">5x</button>
-    <button class="speed-btn" data-speed="20">20x</button>
-    <button class="speed-btn" data-speed="50">50x</button>
-    <button class="speed-btn" data-speed="100">MAX</button>
+    <button class="speed-btn" data-speed="10">10x</button>
+    <button class="speed-btn" data-speed="30">MAX</button>
   </div>
 </div>
 
@@ -784,21 +784,21 @@ function runPTFS(points, totalKm, fromCode, toCode) {
   let trailPolyline = null;
   let trailCoords = [];
   let progress = 0;
-  let lastTime = performance.now();
+  let lastTime = null;
   let lastPanTime = 0;
   let lastHdg = 0;
-  let lastFrameTime = 0;
+  let frameCount = 0;
   const totalNm = totalKm * 0.539957;
 
-  const baseDuration = Math.max(30, totalKm / 100);
+  const flightDurationSec = 60;
 
   function animate(now) {
-    if (now - lastFrameTime < 33) { animationId = requestAnimationFrame(animate); return; }
-    lastFrameTime = now;
-    const dt = (now - lastTime) / 1000;
+    if (lastTime === null) lastTime = now;
+    const dt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
+    frameCount++;
 
-    const increment = (dt * simSpeed) / baseDuration;
+    const increment = (dt * simSpeed) / flightDurationSec;
     progress = Math.min(progress + increment, 1);
 
     const idx = Math.min(Math.floor(progress * (points.length - 1)), points.length - 2);
@@ -806,7 +806,8 @@ function runPTFS(points, totalKm, fromCode, toCode) {
     const lat = points[idx][0] + frac * (points[idx + 1][0] - points[idx][0]);
     const lon = points[idx][1] + frac * (points[idx + 1][1] - points[idx][1]);
 
-    const hdg = bearing(points[idx][0], points[idx][1], points[Math.min(idx + 2, points.length - 1)][0], points[Math.min(idx + 2, points.length - 1)][1]);
+    const nextIdx = Math.min(idx + 2, points.length - 1);
+    const hdg = bearing(points[idx][0], points[idx][1], points[nextIdx][0], points[nextIdx][1]);
 
     if (planeMarker) {
       planeMarker.setLatLng([lat, lon]);
@@ -819,7 +820,7 @@ function runPTFS(points, totalKm, fromCode, toCode) {
       lastHdg = hdg;
     }
 
-    if (!trailCoords.length || idx % 3 === 0) {
+    if (frameCount % 5 === 0) {
       trailCoords.push([lat, lon]);
       if (trailPolyline) {
         trailPolyline.setLatLngs(trailCoords);
@@ -828,7 +829,7 @@ function runPTFS(points, totalKm, fromCode, toCode) {
       }
     }
 
-    if (now - lastPanTime > 500) {
+    if (now - lastPanTime > 400) {
       map.panTo([lat, lon], { animate: false });
       lastPanTime = now;
     }
