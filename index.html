@@ -1207,8 +1207,8 @@ function init3D(canvas, routePoints) {
 
   // Path line
   const pathCurve = new THREE.CatmullRomCurve3(path3D);
-  const pathGeo = new THREE.TubeGeometry(pathCurve, 200, 0.3, 8, false);
-  const pathMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.4 });
+  const pathGeo = new THREE.TubeGeometry(pathCurve, 200, 0.08, 6, false);
+  const pathMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.3 });
   scene.add(new THREE.Mesh(pathGeo, pathMat));
 
   // Plane model
@@ -1267,7 +1267,7 @@ function init3D(canvas, routePoints) {
   const trailPoints2 = [];
 
   // Departure/arrival markers
-  const markerGeo = new THREE.CylinderGeometry(1, 1, 0.3, 16);
+  const markerGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.2, 16);
   const depMat = new THREE.MeshPhongMaterial({ color: 0x00d2ff, emissive: 0x004466 });
   const arrMat = new THREE.MeshPhongMaterial({ color: 0x00e676, emissive: 0x004422 });
   const depMarker = new THREE.Mesh(markerGeo, depMat);
@@ -1288,6 +1288,14 @@ function init3D(canvas, routePoints) {
   starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVerts, 3));
   const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5, transparent: true, opacity: 0.6 });
   scene.add(new THREE.Points(starGeo, starMat));
+
+  // Initialize camera behind start looking forward
+  const startPos = pathCurve.getPointAt(0);
+  const startLook = pathCurve.getPointAt(0.02);
+  const startDir = new THREE.Vector3().subVectors(startLook, startPos).normalize();
+  camera.position.copy(startPos).add(startDir.clone().multiplyScalar(-25));
+  camera.position.y += 8;
+  camera.lookAt(startPos);
 
   // Flight state
   let progress3D = 0;
@@ -1336,8 +1344,9 @@ function init3D(canvas, routePoints) {
 
     // Get position on path
     const curvePoint = pathCurve.getPointAt(t);
-    const lookAhead = pathCurve.getPointAt(Math.min(t + 0.01, 1));
+    const lookAhead = pathCurve.getPointAt(Math.min(t + 0.03, 1));
     const dir = new THREE.Vector3().subVectors(lookAhead, curvePoint).normalize();
+    if (dir.length() < 0.01) dir.set(0, 0, 1);
 
     // Position plane
     planeGroup.position.copy(curvePoint);
