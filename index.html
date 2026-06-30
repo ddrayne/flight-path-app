@@ -264,6 +264,64 @@ body {
   box-shadow: 0 2px 10px rgba(0,210,255,0.3) !important;
 }
 .ptfs-tooltip::before { border-top-color: #00d2ff !important; }
+
+@media (max-width: 700px) {
+  .header {
+    padding: 10px 12px;
+    gap: 6px;
+    justify-content: center;
+  }
+  .header h1 {
+    font-size: 15px;
+    width: 100%;
+    text-align: center;
+    margin-right: 0;
+  }
+  .input-group label { font-size: 10px; }
+  .airport-input {
+    width: 68px;
+    padding: 8px 6px;
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+  .arrow { font-size: 16px; }
+  .fly-btn, .mode-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .progress-bar-container {
+    min-width: 0;
+    width: calc(100% - 20px);
+    left: 10px;
+    right: 10px;
+    transform: none;
+    top: auto;
+    position: relative;
+    margin: 4px auto;
+    border-radius: 8px;
+  }
+  .ptfs-hud { bottom: 48px; left: 4px; right: 4px; }
+  .hud-panel {
+    gap: 8px;
+    padding: 8px 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+  }
+  .hud-gauge { min-width: 50px; }
+  .hud-gauge .gauge-value { font-size: 15px; }
+  .hud-gauge .gauge-label { font-size: 8px; letter-spacing: 0.5px; }
+  .hud-gauge .gauge-unit { font-size: 8px; }
+  .hud-divider { height: 28px; }
+  .info-bar {
+    padding: 6px 10px;
+    gap: 10px;
+    font-size: 11px;
+  }
+  .info-value { font-size: 12px; }
+  .info-label { font-size: 8px; }
+  .autocomplete-list { max-height: 150px; }
+}
 </style>
 </head>
 <body>
