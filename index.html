@@ -253,7 +253,7 @@ body {
 }
 .speed-btn.active { background: #00d2ff; color: #000; border-color: #00d2ff; }
 .speed-btn:hover { border-color: #00d2ff; }
-.ptfs-map-layer { filter: saturate(0.4) brightness(0.6) hue-rotate(180deg); }
+.ptfs-map-layer { opacity: 0.7; }
 .ptfs-tooltip {
   background: rgba(10,10,26,0.9) !important;
   border: 1px solid #00d2ff !important;
@@ -770,11 +770,14 @@ function runPTFS(points, totalKm, fromCode, toCode) {
   let lastTime = performance.now();
   let lastPanTime = 0;
   let lastHdg = 0;
+  let lastFrameTime = 0;
   const totalNm = totalKm * 0.539957;
 
   const baseDuration = Math.max(30, totalKm / 100);
 
   function animate(now) {
+    if (now - lastFrameTime < 33) { animationId = requestAnimationFrame(animate); return; }
+    lastFrameTime = now;
     const dt = (now - lastTime) / 1000;
     lastTime = now;
 
@@ -799,11 +802,13 @@ function runPTFS(points, totalKm, fromCode, toCode) {
       lastHdg = hdg;
     }
 
-    trailCoords.push([lat, lon]);
-    if (trailPolyline) {
-      trailPolyline.setLatLngs(trailCoords);
-    } else {
-      trailPolyline = L.polyline(trailCoords, { color: '#00ff88', weight: 2, opacity: 0.5 }).addTo(flightLayer);
+    if (!trailCoords.length || idx % 3 === 0) {
+      trailCoords.push([lat, lon]);
+      if (trailPolyline) {
+        trailPolyline.setLatLngs(trailCoords);
+      } else {
+        trailPolyline = L.polyline(trailCoords, { color: '#00ff88', weight: 2, opacity: 0.5 }).addTo(flightLayer);
+      }
     }
 
     if (now - lastPanTime > 500) {
