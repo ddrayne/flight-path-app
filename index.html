@@ -253,6 +253,18 @@ body {
 }
 .speed-btn.active { background: #00d2ff; color: #000; border-color: #00d2ff; }
 .speed-btn:hover { border-color: #00d2ff; }
+.ptfs-map-layer { filter: saturate(0.3) brightness(0.4) hue-rotate(200deg); }
+.ptfs-tooltip {
+  background: rgba(10,10,26,0.9) !important;
+  border: 1px solid #00d2ff !important;
+  color: #00d2ff !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+  box-shadow: 0 2px 10px rgba(0,210,255,0.3) !important;
+}
+.ptfs-tooltip::before { border-top-color: #00d2ff !important; }
 </style>
 </head>
 <body>
@@ -520,11 +532,64 @@ const map = L.map('map', {
   attributionControl: false
 });
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+const darkTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 19
-}).addTo(map);
+});
+const ptfsTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19,
+  className: 'ptfs-map-layer'
+});
+darkTile.addTo(map);
 
 let flightLayer = L.layerGroup().addTo(map);
+let ptfsMarkerLayer = L.layerGroup();
+
+const PTFS_REGIONS = {
+  'Rockford': { lat: 42.22, lon: -89.05, color: '#ff6b35', airports: ['IRFD','IMLR','ITRC','IGAR','IBLT'] },
+  'Cyprus': { lat: 34.82, lon: 33.10, color: '#00d2ff', airports: ['IBAR','IHEN','ILAR','IIAB','IPAP'] },
+  'Grindavik': { lat: 64.50, lon: -23.00, color: '#7b2ff7', airports: ['IKFL','ITEY'] },
+  'Izolirani': { lat: 32.50, lon: 44.20, color: '#f7c948', airports: ['IJAF','IZOL','ISCM'] },
+  'Orenji': { lat: 35.60, lon: 139.70, color: '#e040fb', airports: ['IBRD','IDCS','ITKO'] },
+  'Perth': { lat: -31.50, lon: 116.00, color: '#00e676', airports: ['ILKL','IPPH'] },
+  'St Barts': { lat: 17.91, lon: -62.82, color: '#ff4757', airports: ['IBTH','IUFO'] },
+  'Sauthamptona': { lat: 50.95, lon: -1.36, color: '#2ed573', airports: ['ISAU'] },
+  'Skopelos': { lat: 39.12, lon: 23.73, color: '#ffa502', airports: ['ISKP'] },
+};
+
+function buildPTFSMarkers() {
+  ptfsMarkerLayer.clearLayers();
+  for (const [region, info] of Object.entries(PTFS_REGIONS)) {
+    L.marker([info.lat, info.lon], {
+      icon: L.divIcon({
+        html: `<div style="
+          color: ${info.color};
+          font-size: 14px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          text-shadow: 0 0 10px ${info.color}66, 0 2px 4px #000;
+          white-space: nowrap;
+          text-align: center;
+        ">${region}</div>`,
+        iconSize: [120, 20],
+        iconAnchor: [60, -10],
+        className: ''
+      })
+    }).addTo(ptfsMarkerLayer);
+
+    info.airports.forEach(code => {
+      const apt = AIRPORTS[code];
+      if (!apt) return;
+      L.circleMarker([apt.lat, apt.lon], {
+        radius: 6, color: info.color, fillColor: info.color, fillOpacity: 0.8, weight: 2
+      }).bindTooltip(`${code} - ${apt.name.replace(' [PTFS]','')}`, {
+        permanent: false, direction: 'top',
+        className: 'ptfs-tooltip'
+      }).addTo(ptfsMarkerLayer);
+    });
+  }
+}
+buildPTFSMarkers();
 
 function toRad(d) { return d * Math.PI / 180; }
 function toDeg(r) { return r * 180 / Math.PI; }
@@ -623,8 +688,15 @@ modeBtn.addEventListener('click', () => {
   ptfsMode = !ptfsMode;
   modeBtn.textContent = ptfsMode ? 'PTFS MODE ON' : 'PTFS MODE';
   modeBtn.classList.toggle('active', ptfsMode);
-  if (!ptfsMode) {
+  if (ptfsMode) {
+    map.removeLayer(darkTile);
+    ptfsTile.addTo(map);
+    ptfsMarkerLayer.addTo(map);
+  } else {
     stopAnimation();
+    map.removeLayer(ptfsTile);
+    darkTile.addTo(map);
+    map.removeLayer(ptfsMarkerLayer);
     document.getElementById('ptfs-hud').classList.remove('active');
     document.getElementById('progress-bar').classList.remove('active');
   }
