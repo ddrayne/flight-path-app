@@ -22,8 +22,11 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@supports (padding: max(0px)) {
+  body { padding-bottom: max(env(safe-area-inset-bottom, 0px), 0px); }
 }
 .header {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -99,7 +102,8 @@ body {
   box-shadow: 0 4px 20px rgba(0, 210, 255, 0.3);
 }
 .fly-btn:active, .mode-btn:active { transform: translateY(0); }
-#map { flex: 1; background: #0a0a1a; }
+#map { width: 100%; height: 100%; background: #0a0a1a; z-index: 1; }
+.map-wrapper { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .info-bar {
   background: #1a1a2e;
   padding: 12px 24px;
@@ -110,6 +114,7 @@ body {
   font-size: 14px;
   min-height: 48px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 .info-item { display: flex; align-items: center; gap: 6px; }
 .info-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
@@ -146,7 +151,7 @@ body {
 .ptfs-hud {
   display: none;
   position: absolute;
-  bottom: 60px;
+  bottom: 10px;
   left: 0;
   right: 0;
   z-index: 800;
@@ -308,15 +313,14 @@ body {
     min-width: 0;
     width: calc(100% - 16px);
     left: 8px;
-    right: 8px;
+    right: auto;
     transform: none;
-    top: auto;
-    position: relative;
-    margin: 4px auto;
+    top: 8px;
+    position: absolute;
     border-radius: 8px;
   }
   .ptfs-hud {
-    bottom: calc(48px + env(safe-area-inset-bottom));
+    bottom: 8px;
     left: 4px;
     right: 4px;
   }
@@ -334,11 +338,12 @@ body {
   .hud-gauge .gauge-unit { font-size: 7px; }
   .hud-divider { height: 24px; }
   .info-bar {
-    padding: 6px 10px;
-    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    padding: 8px 10px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
     gap: 8px;
     font-size: 11px;
     flex-wrap: wrap;
+    flex-shrink: 0;
   }
   .info-value { font-size: 12px; }
   .info-label { font-size: 8px; }
@@ -406,6 +411,7 @@ body {
   </div>
 </div>
 
+<div class="map-wrapper">
 <div id="map"></div>
 
 <div class="progress-bar-container" id="progress-bar">
@@ -459,6 +465,7 @@ body {
     </div>
   </div>
 </div>
+</div><!-- end map-wrapper -->
 
 <div class="info-bar" id="info-bar">
   <span style="color:#888">Enter departure and arrival airports, then hit FLY</span>
