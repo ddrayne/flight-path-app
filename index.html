@@ -551,6 +551,9 @@ const PTFS_ISLANDS = [
 ];
 function buildPTFSIslands() {
   ptfsCanvas.clearLayers();
+  L.rectangle([[-90, -360], [90, 360]], {
+    color: 'none', weight: 0, fillColor: '#0a1628', fillOpacity: 1
+  }).addTo(ptfsCanvas);
   PTFS_ISLANDS.forEach(island => {
     const pts = [];
     for (let a = 0; a < Math.PI * 2; a += 0.15) {
