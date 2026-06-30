@@ -363,6 +363,17 @@ body {
   <div id="flight3d-controls" style="position:absolute;top:16px;left:16px;color:#888;font-size:12px;font-family:sans-serif;background:rgba(10,10,26,0.8);padding:8px 12px;border-radius:8px;">
     W/S or ↑/↓ — Pitch &nbsp; A/D or ←/→ — Roll &nbsp; Q/E — Throttle
   </div>
+  <!-- Touch joystick (left) and throttle (right) -->
+  <div id="touch-controls" style="display:none; position:absolute; bottom:80px; left:0; right:0; pointer-events:none;">
+    <div id="joystick-zone" style="position:absolute; left:30px; bottom:0; width:140px; height:140px; pointer-events:auto; background:rgba(255,255,255,0.08); border:2px solid rgba(0,210,255,0.3); border-radius:50%;">
+      <div id="joystick-knob" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:50px; height:50px; background:rgba(0,210,255,0.4); border-radius:50%; border:2px solid rgba(0,210,255,0.6);"></div>
+      <div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;font-family:sans-serif;">PITCH / ROLL</div>
+    </div>
+    <div id="throttle-zone" style="position:absolute; right:30px; bottom:0; width:60px; height:140px; pointer-events:auto; background:rgba(255,255,255,0.08); border:2px solid rgba(0,210,255,0.3); border-radius:30px;">
+      <div id="throttle-knob" style="position:absolute; left:50%; bottom:40%; transform:translate(-50%,50%); width:44px; height:30px; background:rgba(0,255,136,0.4); border-radius:15px; border:2px solid rgba(0,255,136,0.6);"></div>
+      <div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;font-family:sans-serif;">THROTTLE</div>
+    </div>
+  </div>
 </div>
 
 <div id="map"></div>
@@ -1313,6 +1324,73 @@ function init3D(canvas, routePoints) {
   window.addEventListener('keydown', onKey);
   window.addEventListener('keyup', onKey);
 
+  // Touch controls
+  const isTouchDevice = 'ontouchstart' in window;
+  const touchControls = document.getElementById('touch-controls');
+  const joystickZone = document.getElementById('joystick-zone');
+  const joystickKnob = document.getElementById('joystick-knob');
+  const throttleZone = document.getElementById('throttle-zone');
+  const throttleKnob = document.getElementById('throttle-knob');
+  let touchPitch = 0, touchRoll = 0, touchThrottle = 1;
+  let joystickTouchId = null, throttleTouchId = null;
+
+  if (isTouchDevice) {
+    touchControls.style.display = 'block';
+    document.getElementById('flight3d-controls').style.display = 'none';
+
+    joystickZone.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      joystickTouchId = e.changedTouches[0].identifier;
+    });
+    joystickZone.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const touch of e.changedTouches) {
+        if (touch.identifier === joystickTouchId) {
+          const rect = joystickZone.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          touchRoll = Math.max(-1, Math.min(1, (touch.clientX - cx) / (rect.width / 2)));
+          touchPitch = Math.max(-1, Math.min(1, -(touch.clientY - cy) / (rect.height / 2)));
+          joystickKnob.style.left = (50 + touchRoll * 35) + '%';
+          joystickKnob.style.top = (50 - touchPitch * 35) + '%';
+        }
+      }
+    });
+    joystickZone.addEventListener('touchend', (e) => {
+      for (const touch of e.changedTouches) {
+        if (touch.identifier === joystickTouchId) {
+          joystickTouchId = null;
+          touchPitch = 0; touchRoll = 0;
+          joystickKnob.style.left = '50%';
+          joystickKnob.style.top = '50%';
+        }
+      }
+    });
+
+    throttleZone.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      throttleTouchId = e.changedTouches[0].identifier;
+    });
+    throttleZone.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const touch of e.changedTouches) {
+        if (touch.identifier === throttleTouchId) {
+          const rect = throttleZone.getBoundingClientRect();
+          const pct = 1 - (touch.clientY - rect.top) / rect.height;
+          touchThrottle = 0.2 + Math.max(0, Math.min(1, pct)) * 2.8;
+          throttleKnob.style.bottom = (Math.max(0, Math.min(1, pct)) * 80 + 5) + '%';
+        }
+      }
+    });
+    throttleZone.addEventListener('touchend', (e) => {
+      for (const touch of e.changedTouches) {
+        if (touch.identifier === throttleTouchId) {
+          throttleTouchId = null;
+        }
+      }
+    });
+  }
+
   function animate3D(now) {
     if (!flight3DActive) {
       window.removeEventListener('keydown', onKey);
@@ -1326,17 +1404,20 @@ function init3D(canvas, routePoints) {
     const dt = Math.min((now - lastTime3D) / 1000, 0.1);
     lastTime3D = now;
 
-    // Input
+    // Input (keyboard + touch)
     if (keys['w'] || keys['arrowup']) pitchInput = Math.min(pitchInput + dt * 2, 1);
     else if (keys['s'] || keys['arrowdown']) pitchInput = Math.max(pitchInput - dt * 2, -1);
+    else if (isTouchDevice) pitchInput += (touchPitch - pitchInput) * 0.15;
     else pitchInput *= 0.95;
 
     if (keys['a'] || keys['arrowleft']) rollInput = Math.min(rollInput + dt * 2, 1);
     else if (keys['d'] || keys['arrowright']) rollInput = Math.max(rollInput - dt * 2, -1);
+    else if (isTouchDevice) rollInput += (touchRoll - rollInput) * 0.15;
     else rollInput *= 0.95;
 
     if (keys['e']) throttle = Math.min(throttle + dt, 3);
-    if (keys['q']) throttle = Math.max(throttle - dt, 0.2);
+    else if (keys['q']) throttle = Math.max(throttle - dt, 0.2);
+    else if (isTouchDevice) throttle += (touchThrottle - throttle) * 0.1;
 
     // Progress along path
     progress3D = Math.min(progress3D + dt * throttle * 0.015, 1);
