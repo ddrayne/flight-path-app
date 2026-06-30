@@ -2,18 +2,28 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Flight Path">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
 <title>Flight Path Tracker</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; overflow: hidden; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: #0a0a1a;
   color: #e0e0e0;
-  height: 100vh;
+  height: 100%;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .header {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -267,60 +277,80 @@ body {
 
 @media (max-width: 700px) {
   .header {
-    padding: 10px 12px;
+    padding: 8px 10px;
     gap: 6px;
     justify-content: center;
+    padding-top: max(8px, env(safe-area-inset-top));
   }
   .header h1 {
-    font-size: 15px;
+    font-size: 14px;
     width: 100%;
     text-align: center;
     margin-right: 0;
+    margin-bottom: 2px;
   }
-  .input-group label { font-size: 10px; }
+  .input-group { gap: 4px; }
+  .input-group label { font-size: 9px; }
   .airport-input {
-    width: 68px;
+    width: 64px;
     padding: 8px 6px;
-    font-size: 14px;
+    font-size: 16px; /* 16px prevents iOS zoom on focus */
     letter-spacing: 1px;
   }
-  .arrow { font-size: 16px; }
   .fly-btn, .mode-btn {
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+    min-height: 44px; /* iOS touch target */
   }
+  #swap-btn { min-height: 44px; min-width: 44px; font-size: 20px; }
+  .speed-btn { min-height: 36px; min-width: 36px; }
   .progress-bar-container {
     min-width: 0;
-    width: calc(100% - 20px);
-    left: 10px;
-    right: 10px;
+    width: calc(100% - 16px);
+    left: 8px;
+    right: 8px;
     transform: none;
     top: auto;
     position: relative;
     margin: 4px auto;
     border-radius: 8px;
   }
-  .ptfs-hud { bottom: 48px; left: 4px; right: 4px; }
+  .ptfs-hud {
+    bottom: calc(48px + env(safe-area-inset-bottom));
+    left: 4px;
+    right: 4px;
+  }
   .hud-panel {
-    gap: 8px;
-    padding: 8px 8px;
+    gap: 6px;
+    padding: 8px 6px;
     flex-wrap: wrap;
     justify-content: center;
     max-width: 100%;
+    border-radius: 10px;
   }
-  .hud-gauge { min-width: 50px; }
-  .hud-gauge .gauge-value { font-size: 15px; }
-  .hud-gauge .gauge-label { font-size: 8px; letter-spacing: 0.5px; }
-  .hud-gauge .gauge-unit { font-size: 8px; }
-  .hud-divider { height: 28px; }
+  .hud-gauge { min-width: 48px; }
+  .hud-gauge .gauge-value { font-size: 14px; }
+  .hud-gauge .gauge-label { font-size: 7px; letter-spacing: 0.5px; }
+  .hud-gauge .gauge-unit { font-size: 7px; }
+  .hud-divider { height: 24px; }
   .info-bar {
     padding: 6px 10px;
-    gap: 10px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    gap: 8px;
     font-size: 11px;
+    flex-wrap: wrap;
   }
   .info-value { font-size: 12px; }
   .info-label { font-size: 8px; }
-  .autocomplete-list { max-height: 150px; }
+  .autocomplete-list { max-height: 40vh; }
+  .autocomplete-item { padding: 12px 14px; min-height: 44px; }
+}
+@media (max-width: 380px) {
+  .header h1 { font-size: 12px; }
+  .airport-input { width: 56px; font-size: 16px; padding: 6px 4px; }
+  .fly-btn, .mode-btn { padding: 8px 10px; font-size: 11px; }
+  .hud-gauge { min-width: 42px; }
+  .hud-gauge .gauge-value { font-size: 12px; }
 }
 </style>
 </head>
@@ -350,7 +380,7 @@ body {
 
 <div id="flight3d-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:2000; background:#000;">
   <canvas id="flight3d-canvas" style="width:100%; height:100%;"></canvas>
-  <div id="flight3d-hud" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(10,10,26,0.9); border:2px solid #0f3460; border-radius:12px; padding:12px 20px; display:flex; gap:20px; align-items:center; font-family:monospace;">
+  <div id="flight3d-hud" style="position:absolute; bottom:max(20px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); background:rgba(10,10,26,0.9); border:2px solid #0f3460; border-radius:12px; padding:10px 14px; display:flex; gap:12px; align-items:center; font-family:monospace; max-width:calc(100vw - 40px); flex-wrap:wrap; justify-content:center;">
     <div style="text-align:center"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;">Speed</div><div style="font-size:20px;font-weight:800;color:#00ff88;" id="hud3d-speed">0</div></div>
     <div style="width:1px;height:36px;background:#0f3460;"></div>
     <div style="text-align:center"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;">Alt</div><div style="font-size:20px;font-weight:800;color:#00ff88;" id="hud3d-alt">0</div></div>
@@ -359,12 +389,12 @@ body {
     <div style="width:1px;height:36px;background:#0f3460;"></div>
     <div style="text-align:center"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;">Phase</div><div style="font-size:14px;font-weight:700;color:#f7c948;" id="hud3d-phase">READY</div></div>
   </div>
-  <button id="flight3d-close" style="position:absolute;top:16px;right:16px;background:rgba(255,71,87,0.9);border:none;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;z-index:2001;">EXIT 3D</button>
+  <button id="flight3d-close" style="position:absolute;top:max(16px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));background:rgba(255,71,87,0.9);border:none;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;z-index:2001;min-height:44px;">EXIT 3D</button>
   <div id="flight3d-controls" style="position:absolute;top:16px;left:16px;color:#888;font-size:12px;font-family:sans-serif;background:rgba(10,10,26,0.8);padding:8px 12px;border-radius:8px;">
     W/S or ↑/↓ — Pitch &nbsp; A/D or ←/→ — Roll &nbsp; Q/E — Throttle
   </div>
   <!-- Touch joystick (left) and throttle (right) -->
-  <div id="touch-controls" style="display:none; position:absolute; bottom:80px; left:0; right:0; pointer-events:none;">
+  <div id="touch-controls" style="display:none; position:absolute; bottom:calc(80px + env(safe-area-inset-bottom)); left:0; right:0; pointer-events:none;">
     <div id="joystick-zone" style="position:absolute; left:30px; bottom:0; width:140px; height:140px; pointer-events:auto; background:rgba(255,255,255,0.08); border:2px solid rgba(0,210,255,0.3); border-radius:50%;">
       <div id="joystick-knob" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:50px; height:50px; background:rgba(0,210,255,0.4); border-radius:50%; border:2px solid rgba(0,210,255,0.6);"></div>
       <div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;font-family:sans-serif;">PITCH / ROLL</div>
@@ -436,6 +466,28 @@ body {
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+// Prevent iOS overscroll bounce
+document.body.addEventListener('touchmove', (e) => {
+  if (e.target.closest('.autocomplete-list') || e.target.closest('#map')) return;
+  if (e.target.closest('#joystick-zone') || e.target.closest('#throttle-zone')) { e.preventDefault(); return; }
+}, { passive: false });
+
+// Screen Wake Lock — keep screen on during flights
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+  } catch(e) {}
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+
+// Haptic feedback helper
+function haptic(style) {
+  if (navigator.vibrate) navigator.vibrate(style === 'heavy' ? [100, 50, 100] : style === 'medium' ? 50 : 15);
+}
+
 const AIRPORTS = {
   "ATL": { name: "Hartsfield-Jackson Atlanta", city: "Atlanta", country: "US", lat: 33.6407, lon: -84.4277 },
   "PEK": { name: "Beijing Capital", city: "Beijing", country: "CN", lat: 40.0799, lon: 116.6031 },
@@ -961,6 +1013,8 @@ function runPTFS(points, totalKm, fromCode, toCode) {
       hudEl('hud-vs', '0');
       hudEl('hud-dist', '0');
       document.getElementById('hud-phase').innerHTML = '<span class="phase-badge phase-landed">LANDED</span>';
+      haptic('heavy');
+      releaseWakeLock();
 
       document.getElementById('info-bar').innerHTML = `
         <div class="info-item"><span class="info-value" style="color:#00e676">&#10003; LANDED at ${toCode}</span></div>
@@ -988,6 +1042,8 @@ function resolveAirport(input) {
 
 function fly() {
   stopAnimation();
+  requestWakeLock();
+  haptic('light');
 
   const fromInput = document.getElementById('from').value.trim().toUpperCase();
   const toInput = document.getElementById('to').value.trim().toUpperCase();
@@ -1196,12 +1252,15 @@ function close3DFlight() {
   if (cleanup3D) { cleanup3D(); cleanup3D = null; }
   document.getElementById('flight3d-overlay').style.display = 'none';
   document.getElementById('touch-controls').style.display = 'none';
+  releaseWakeLock();
 }
 
 function launch3DFlight(routePoints) {
   const overlay = document.getElementById('flight3d-overlay');
   overlay.style.display = 'block';
   flight3DActive = true;
+  requestWakeLock();
+  haptic('medium');
 
   const canvas = document.getElementById('flight3d-canvas');
   const script = document.createElement('script');
