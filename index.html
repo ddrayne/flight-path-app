@@ -253,7 +253,6 @@ body {
 }
 .speed-btn.active { background: #00d2ff; color: #000; border-color: #00d2ff; }
 .speed-btn:hover { border-color: #00d2ff; }
-.ptfs-map-layer { opacity: 0.7; }
 .ptfs-tooltip {
   background: rgba(10,10,26,0.9) !important;
   border: 1px solid #00d2ff !important;
@@ -538,10 +537,35 @@ const map = L.map('map', {
 const darkTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 19
 });
-const ptfsTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-  maxZoom: 19,
-  className: 'ptfs-map-layer'
-});
+const ptfsCanvas = L.layerGroup();
+const PTFS_ISLANDS = [
+  { name: 'Greater Rockford', lat: 42.20, lon: -89.05, rx: 2.5, ry: 1.8, color: '#1a2a1a' },
+  { name: 'Cyprus', lat: 34.85, lon: 33.10, rx: 1.8, ry: 1.0, color: '#1a2a1a' },
+  { name: 'Grindavik', lat: 64.00, lon: -22.50, rx: 2.0, ry: 1.2, color: '#1a2a1a' },
+  { name: 'Izolirani', lat: 32.50, lon: 44.30, rx: 2.2, ry: 1.5, color: '#1a2a1a' },
+  { name: 'Orenji', lat: 35.60, lon: 139.70, rx: 2.0, ry: 1.5, color: '#1a2a1a' },
+  { name: 'Perth', lat: -31.50, lon: 116.00, rx: 3.0, ry: 2.0, color: '#1a2a1a' },
+  { name: 'Saint Barthélemy', lat: 17.90, lon: -62.83, rx: 0.8, ry: 0.5, color: '#1a2a1a' },
+  { name: 'Sauthamptona', lat: 50.95, lon: -1.36, rx: 1.5, ry: 1.0, color: '#1a2a1a' },
+  { name: 'Skopelos', lat: 39.12, lon: 23.73, rx: 0.7, ry: 0.5, color: '#1a2a1a' },
+];
+function buildPTFSIslands() {
+  ptfsCanvas.clearLayers();
+  PTFS_ISLANDS.forEach(island => {
+    const pts = [];
+    for (let a = 0; a < Math.PI * 2; a += 0.15) {
+      const wobble = 0.85 + Math.sin(a * 3.7) * 0.1 + Math.cos(a * 5.3) * 0.05;
+      pts.push([
+        island.lat + Math.sin(a) * island.ry * wobble,
+        island.lon + Math.cos(a) * island.rx * wobble
+      ]);
+    }
+    pts.push(pts[0]);
+    L.polygon(pts, {
+      color: '#2a4a2a', weight: 1, fillColor: '#1a2a1a', fillOpacity: 0.9
+    }).addTo(ptfsCanvas);
+  });
+}
 darkTile.addTo(map);
 
 let flightLayer = L.layerGroup().addTo(map);
@@ -694,13 +718,16 @@ modeBtn.addEventListener('click', () => {
   modeBtn.classList.toggle('active', ptfsMode);
   if (ptfsMode) {
     map.removeLayer(darkTile);
-    ptfsTile.addTo(map);
+    buildPTFSIslands();
+    ptfsCanvas.addTo(map);
     ptfsMarkerLayer.addTo(map);
+    document.getElementById('map').style.background = '#0a1628';
   } else {
     stopAnimation();
-    map.removeLayer(ptfsTile);
+    map.removeLayer(ptfsCanvas);
     darkTile.addTo(map);
     map.removeLayer(ptfsMarkerLayer);
+    document.getElementById('map').style.background = '#0a0a1a';
     document.getElementById('ptfs-hud').classList.remove('active');
     document.getElementById('progress-bar').classList.remove('active');
   }
