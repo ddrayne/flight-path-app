@@ -633,15 +633,16 @@ function estimateFlightTime(km) {
   return `${h}h ${m}m`;
 }
 
-function splitAntimeridian(points) {
-  const segments = [[]];
-  for (let i = 0; i < points.length; i++) {
-    segments[segments.length - 1].push(points[i]);
-    if (i < points.length - 1 && Math.abs(points[i][1] - points[i + 1][1]) > 180) {
-      segments.push([]);
-    }
+function unwrapLongitudes(points) {
+  const result = [[points[0][0], points[0][1]]];
+  for (let i = 1; i < points.length; i++) {
+    let lon = points[i][1];
+    const prevLon = result[i - 1][1];
+    while (lon - prevLon > 180) lon -= 360;
+    while (prevLon - lon > 180) lon += 360;
+    result.push([points[i][0], lon]);
   }
-  return segments;
+  return result;
 }
 
 function createRotatedPlaneIcon(heading) {
@@ -900,13 +901,11 @@ function fly() {
   currentToCode = toCode;
   flightLayer.clearLayers();
 
-  const points = greatCirclePoints(from.lat, from.lon, to.lat, to.lon);
-  const segments = splitAntimeridian(points);
+  const rawPoints = greatCirclePoints(from.lat, from.lon, to.lat, to.lon);
+  const points = unwrapLongitudes(rawPoints);
 
-  segments.forEach(seg => {
-    L.polyline(seg, { color: '#00d2ff', weight: 3, opacity: 0.8, dashArray: '10, 6' }).addTo(flightLayer);
-    L.polyline(seg, { color: '#7b2ff7', weight: 1.5, opacity: 0.4 }).addTo(flightLayer);
-  });
+  L.polyline(points, { color: '#00d2ff', weight: 3, opacity: 0.8, dashArray: '10, 6' }).addTo(flightLayer);
+  L.polyline(points, { color: '#7b2ff7', weight: 1.5, opacity: 0.4 }).addTo(flightLayer);
 
   L.marker([from.lat, from.lon], { icon: createAirportIcon(fromCode) }).addTo(flightLayer);
   L.marker([to.lat, to.lon], { icon: createAirportIcon(toCode) }).addTo(flightLayer);
