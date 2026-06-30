@@ -843,8 +843,9 @@ function setupAutocomplete(inputId, listId) {
 
     const matches = Object.entries(AIRPORTS)
       .filter(([code, a]) =>
+        code.includes(val) ||
         code.startsWith(val) ||
-        a.city.toUpperCase().startsWith(val) ||
+        a.city.toUpperCase().includes(val) ||
         a.name.toUpperCase().includes(val)
       )
       .slice(0, 8);
