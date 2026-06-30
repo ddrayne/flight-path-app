@@ -1167,9 +1167,9 @@ function init3D(canvas, routePoints) {
   renderer.setClearColor(0x0a1628);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x0a1628, 200, 800);
+  scene.fog = new THREE.Fog(0x0a1628, 400, 1500);
 
-  const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 2000);
+  const camera = new THREE.PerspectiveCamera(55, W / H, 0.1, 3000);
 
   const ambient = new THREE.AmbientLight(0x4466aa, 0.6);
   scene.add(ambient);
@@ -1201,57 +1201,63 @@ function init3D(canvas, routePoints) {
     const x = (p[1] - routePoints[0][1]) * pathScale;
     const z = -(p[0] - routePoints[0][0]) * pathScale;
     const t = i / (routePoints.length - 1);
-    const alt = getAltitude(t) / 500;
+    const alt = getAltitude(t) / 2000;
     return new THREE.Vector3(x, alt, z);
   });
 
   // Path line
   const pathCurve = new THREE.CatmullRomCurve3(path3D);
-  const pathGeo = new THREE.TubeGeometry(pathCurve, 200, 0.15, 8, false);
+  const pathGeo = new THREE.TubeGeometry(pathCurve, 200, 0.3, 8, false);
   const pathMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.4 });
   scene.add(new THREE.Mesh(pathGeo, pathMat));
 
-  // Plane model (simple shape)
+  // Plane model
   const planeGroup = new THREE.Group();
+  const planeMat = new THREE.MeshPhongMaterial({ color: 0xeeeeee, shininess: 100 });
+  const wingMat = new THREE.MeshPhongMaterial({ color: 0xdddddd });
+  const engMat = new THREE.MeshPhongMaterial({ color: 0x666666 });
 
-  // Fuselage
-  const fuselageGeo = new THREE.CylinderGeometry(0.3, 0.2, 3, 8);
-  const planeMat = new THREE.MeshPhongMaterial({ color: 0xdddddd, shininess: 100 });
+  // Fuselage (along Z axis = forward)
+  const fuselageGeo = new THREE.CylinderGeometry(0.35, 0.25, 4, 8);
   const fuselage = new THREE.Mesh(fuselageGeo, planeMat);
-  fuselage.rotation.z = Math.PI / 2;
+  fuselage.rotation.x = Math.PI / 2;
   planeGroup.add(fuselage);
 
-  // Wings
-  const wingGeo = new THREE.BoxGeometry(5, 0.08, 0.8);
-  const wingMat = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+  // Nose cone
+  const noseGeo = new THREE.ConeGeometry(0.35, 1, 8);
+  const nose = new THREE.Mesh(noseGeo, planeMat);
+  nose.rotation.x = -Math.PI / 2;
+  nose.position.z = 2.5;
+  planeGroup.add(nose);
+
+  // Wings (spread along X, thin along Y)
+  const wingGeo = new THREE.BoxGeometry(7, 0.1, 1.2);
   const wings = new THREE.Mesh(wingGeo, wingMat);
-  wings.position.y = 0;
+  wings.position.z = -0.2;
   planeGroup.add(wings);
 
-  // Tail fin
-  const tailGeo = new THREE.BoxGeometry(0.08, 1, 0.6);
+  // Tail fin (vertical)
+  const tailGeo = new THREE.BoxGeometry(0.1, 1.5, 1);
   const tail = new THREE.Mesh(tailGeo, wingMat);
-  tail.position.set(0, 0.5, -1.2);
+  tail.position.set(0, 0.7, -2);
   planeGroup.add(tail);
 
-  // Tail wings
-  const tailWingGeo = new THREE.BoxGeometry(1.8, 0.06, 0.4);
-  const tailWings = new THREE.Mesh(tailWingGeo, wingMat);
-  tailWings.position.set(0, 0, -1.2);
-  planeGroup.add(tailWings);
+  // Horizontal stabiliser
+  const hStabGeo = new THREE.BoxGeometry(2.5, 0.08, 0.6);
+  const hStab = new THREE.Mesh(hStabGeo, wingMat);
+  hStab.position.set(0, 0, -2);
+  planeGroup.add(hStab);
 
-  // Engines
-  const engGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.8, 8);
-  const engMat = new THREE.MeshPhongMaterial({ color: 0x666666 });
+  // Engines (under wings)
+  const engGeo = new THREE.CylinderGeometry(0.22, 0.22, 1, 8);
   const eng1 = new THREE.Mesh(engGeo, engMat);
-  eng1.rotation.z = Math.PI / 2;
-  eng1.position.set(-1.2, -0.2, 0.2);
+  eng1.rotation.x = Math.PI / 2;
+  eng1.position.set(-1.8, -0.3, 0.2);
   planeGroup.add(eng1);
   const eng2 = eng1.clone();
-  eng2.position.set(1.2, -0.2, 0.2);
+  eng2.position.set(1.8, -0.3, 0.2);
   planeGroup.add(eng2);
 
-  planeGroup.scale.set(0.8, 0.8, 0.8);
   scene.add(planeGroup);
 
   // Contrails
@@ -1340,12 +1346,12 @@ function init3D(canvas, routePoints) {
     planeGroup.rotation.z = -rollInput * 0.5;
 
     // Camera chase
-    const camOffset = new THREE.Vector3();
-    camOffset.copy(dir).multiplyScalar(-12);
-    camOffset.y += 4;
-    const camTarget = new THREE.Vector3().addVectors(planeGroup.position, camOffset);
-    camera.position.lerp(camTarget, 0.08);
-    const lookTarget = new THREE.Vector3().addVectors(planeGroup.position, dir.multiplyScalar(10));
+    const camBack = dir.clone().multiplyScalar(-25);
+    camBack.y += 8;
+    const camTarget = new THREE.Vector3().addVectors(planeGroup.position, camBack);
+    camera.position.lerp(camTarget, 0.06);
+    const lookTarget = new THREE.Vector3().addVectors(planeGroup.position, dir.clone().multiplyScalar(15));
+    lookTarget.y += 1;
     camera.lookAt(lookTarget);
 
     // Animate ocean
