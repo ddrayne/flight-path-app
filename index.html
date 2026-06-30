@@ -761,9 +761,12 @@ function runPTFS(points, totalKm, fromCode, toCode) {
   document.getElementById('progress-route').innerHTML = `${fromCode} &rarr; ${toCode}`;
 
   let planeMarker = null;
-  let trailLayer = L.layerGroup().addTo(flightLayer);
+  let trailPolyline = null;
+  let trailCoords = [];
   let progress = 0;
   let lastTime = performance.now();
+  let lastPanTime = 0;
+  let lastHdg = 0;
   const totalNm = totalKm * 0.539957;
 
   const baseDuration = Math.max(30, totalKm / 100);
@@ -784,21 +787,26 @@ function runPTFS(points, totalKm, fromCode, toCode) {
 
     if (planeMarker) {
       planeMarker.setLatLng([lat, lon]);
-      planeMarker.setIcon(createRotatedPlaneIcon(hdg));
+      if (Math.abs(hdg - lastHdg) > 2) {
+        planeMarker.setIcon(createRotatedPlaneIcon(hdg));
+        lastHdg = hdg;
+      }
     } else {
       planeMarker = L.marker([lat, lon], { icon: createRotatedPlaneIcon(hdg), zIndexOffset: 1000 }).addTo(flightLayer);
+      lastHdg = hdg;
     }
 
-    if (idx > 0 && idx % 3 === 0) {
-      const trailPts = points.slice(0, idx + 1);
-      trailLayer.clearLayers();
-      const segs = splitAntimeridian(trailPts);
-      segs.forEach(seg => {
-        L.polyline(seg, { color: '#00ff88', weight: 2, opacity: 0.5 }).addTo(trailLayer);
-      });
+    trailCoords.push([lat, lon]);
+    if (trailPolyline) {
+      trailPolyline.setLatLngs(trailCoords);
+    } else {
+      trailPolyline = L.polyline(trailCoords, { color: '#00ff88', weight: 2, opacity: 0.5 }).addTo(flightLayer);
     }
 
-    map.panTo([lat, lon], { animate: true, duration: 0.3 });
+    if (now - lastPanTime > 500) {
+      map.panTo([lat, lon], { animate: false });
+      lastPanTime = now;
+    }
 
     const phase = getFlightPhase(progress);
     const alt = getAltitude(progress);
