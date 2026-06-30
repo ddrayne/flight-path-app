@@ -253,7 +253,7 @@ body {
 }
 .speed-btn.active { background: #00d2ff; color: #000; border-color: #00d2ff; }
 .speed-btn:hover { border-color: #00d2ff; }
-.ptfs-map-layer { filter: saturate(0.3) brightness(0.4) hue-rotate(200deg); }
+.ptfs-map-layer { filter: saturate(0.1) brightness(0.25) hue-rotate(200deg) contrast(1.2); }
 .ptfs-tooltip {
   background: rgba(10,10,26,0.9) !important;
   border: 1px solid #00d2ff !important;
@@ -529,13 +529,16 @@ const map = L.map('map', {
   center: [30, 0],
   zoom: 3,
   zoomControl: true,
-  attributionControl: false
+  attributionControl: false,
+  maxBoundsViscosity: 1.0,
+  worldCopyJump: true,
+  minZoom: 2
 });
 
 const darkTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 19
 });
-const ptfsTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+const ptfsTile = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
   maxZoom: 19,
   className: 'ptfs-map-layer'
 });
@@ -918,10 +921,9 @@ function fly() {
 
   if (ptfsMode) {
     setTimeout(() => {
-      map.setZoom(6);
-      map.panTo([from.lat, from.lon]);
+      map.setView([from.lat, from.lon], 5, { animate: false });
       runPTFS(points, km, fromCode, toCode);
-    }, 800);
+    }, 400);
   } else {
     const midIdx = Math.floor(points.length / 2);
     L.marker(points[midIdx], { icon: createRotatedPlaneIcon(bearing(points[midIdx][0], points[midIdx][1], points[midIdx+1][0], points[midIdx+1][1])) }).addTo(flightLayer);
