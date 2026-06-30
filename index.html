@@ -23,6 +23,7 @@ body {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
+  z-index: 500;
 }
 .header h1 {
   font-size: 22px;
@@ -55,18 +56,13 @@ body {
   text-transform: uppercase;
   letter-spacing: 2px;
   transition: border-color 0.2s;
-  position: relative;
 }
 .airport-input:focus {
   outline: none;
   border-color: #00d2ff;
 }
-.arrow {
-  font-size: 24px;
-  color: #00d2ff;
-}
-.fly-btn {
-  background: linear-gradient(135deg, #00d2ff 0%, #7b2ff7 100%);
+.arrow { font-size: 24px; color: #00d2ff; }
+.fly-btn, .mode-btn {
   border: none;
   color: #fff;
   padding: 10px 28px;
@@ -77,15 +73,23 @@ body {
   letter-spacing: 1px;
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.fly-btn:hover {
+.fly-btn {
+  background: linear-gradient(135deg, #00d2ff 0%, #7b2ff7 100%);
+}
+.mode-btn {
+  background: linear-gradient(135deg, #ff6b35 0%, #f7c948 100%);
+  font-size: 13px;
+  padding: 10px 16px;
+}
+.mode-btn.active {
+  background: linear-gradient(135deg, #00e676 0%, #00bfa5 100%);
+}
+.fly-btn:hover, .mode-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 20px rgba(0, 210, 255, 0.3);
 }
-.fly-btn:active { transform: translateY(0); }
-#map {
-  flex: 1;
-  background: #0a0a1a;
-}
+.fly-btn:active, .mode-btn:active { transform: translateY(0); }
+#map { flex: 1; background: #0a0a1a; }
 .info-bar {
   background: #1a1a2e;
   padding: 12px 24px;
@@ -95,14 +99,12 @@ body {
   border-top: 2px solid #0f3460;
   font-size: 14px;
   min-height: 48px;
+  flex-wrap: wrap;
 }
 .info-item { display: flex; align-items: center; gap: 6px; }
 .info-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
 .info-value { color: #00d2ff; font-weight: 700; font-size: 16px; }
-.error-msg {
-  color: #ff4757;
-  font-weight: 600;
-}
+.error-msg { color: #ff4757; font-weight: 600; }
 .autocomplete-wrapper { position: relative; }
 .autocomplete-list {
   position: absolute;
@@ -125,20 +127,132 @@ body {
   font-size: 13px;
   border-bottom: 1px solid #1b2838;
 }
-.autocomplete-item:hover, .autocomplete-item.selected {
-  background: #16213e;
-}
-.autocomplete-item .code {
-  font-weight: 700;
-  color: #00d2ff;
-  font-size: 15px;
-  margin-right: 8px;
-}
+.autocomplete-item:hover, .autocomplete-item.selected { background: #16213e; }
+.autocomplete-item .code { font-weight: 700; color: #00d2ff; font-size: 15px; margin-right: 8px; }
 .autocomplete-item .name { color: #aaa; }
-.plane-icon {
-  font-size: 20px;
-  filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.8));
+.plane-icon { font-size: 20px; filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.8)); }
+
+/* PTFS HUD */
+.ptfs-hud {
+  display: none;
+  position: absolute;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  z-index: 800;
+  pointer-events: none;
 }
+.ptfs-hud.active { display: flex; }
+.hud-panel {
+  background: rgba(10, 10, 26, 0.92);
+  border: 2px solid #0f3460;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 0 auto;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+}
+.hud-gauge {
+  text-align: center;
+  min-width: 80px;
+}
+.hud-gauge .gauge-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #888;
+  margin-bottom: 4px;
+}
+.hud-gauge .gauge-value {
+  font-size: 24px;
+  font-weight: 800;
+  font-family: 'Courier New', monospace;
+  color: #00ff88;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+.hud-gauge .gauge-unit {
+  font-size: 11px;
+  color: #666;
+  margin-left: 2px;
+}
+.hud-divider {
+  width: 1px;
+  height: 50px;
+  background: #0f3460;
+}
+.phase-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.phase-taxi { background: #f7c948; color: #000; }
+.phase-takeoff { background: #ff6b35; color: #fff; }
+.phase-climb { background: #7b2ff7; color: #fff; }
+.phase-cruise { background: #00d2ff; color: #000; }
+.phase-descent { background: #e040fb; color: #fff; }
+.phase-approach { background: #ff6b35; color: #fff; }
+.phase-landed { background: #00e676; color: #000; }
+
+.progress-bar-container {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 800;
+  display: none;
+  pointer-events: auto;
+  background: rgba(10, 10, 26, 0.88);
+  border: 2px solid #0f3460;
+  border-radius: 10px;
+  padding: 10px 20px;
+  min-width: 360px;
+  backdrop-filter: blur(8px);
+}
+.progress-bar-container.active { display: block; }
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 6px;
+}
+.progress-label .route-label { color: #00d2ff; font-weight: 700; }
+.progress-track {
+  height: 8px;
+  background: #1b2838;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00d2ff, #7b2ff7);
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.speed-controls {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  justify-content: center;
+}
+.speed-btn {
+  background: #1b2838;
+  border: 1px solid #0f3460;
+  color: #888;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.speed-btn.active { background: #00d2ff; color: #000; border-color: #00d2ff; }
+.speed-btn:hover { border-color: #00d2ff; }
 </style>
 </head>
 <body>
@@ -161,9 +275,61 @@ body {
     </div>
   </div>
   <button class="fly-btn" id="fly-btn">FLY</button>
+  <button class="mode-btn" id="mode-btn">PTFS MODE</button>
 </div>
 
 <div id="map"></div>
+
+<div class="progress-bar-container" id="progress-bar">
+  <div class="progress-label">
+    <span class="route-label" id="progress-route">EDI &rarr; JFK</span>
+    <span id="progress-pct">0%</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+  <div class="speed-controls">
+    <button class="speed-btn" data-speed="1">1x</button>
+    <button class="speed-btn active" data-speed="5">5x</button>
+    <button class="speed-btn" data-speed="20">20x</button>
+    <button class="speed-btn" data-speed="50">50x</button>
+    <button class="speed-btn" data-speed="100">MAX</button>
+  </div>
+</div>
+
+<div class="ptfs-hud" id="ptfs-hud">
+  <div class="hud-panel">
+    <div class="hud-gauge">
+      <div class="gauge-label">Speed</div>
+      <div class="gauge-value"><span id="hud-speed">0</span><span class="gauge-unit">kts</span></div>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-gauge">
+      <div class="gauge-label">Altitude</div>
+      <div class="gauge-value"><span id="hud-alt">0</span><span class="gauge-unit">ft</span></div>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-gauge">
+      <div class="gauge-label">Heading</div>
+      <div class="gauge-value"><span id="hud-hdg">---</span><span class="gauge-unit">&deg;</span></div>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-gauge">
+      <div class="gauge-label">V/S</div>
+      <div class="gauge-value"><span id="hud-vs">0</span><span class="gauge-unit">fpm</span></div>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-gauge">
+      <div class="gauge-label">Phase</div>
+      <div id="hud-phase"><span class="phase-badge phase-taxi">READY</span></div>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-gauge">
+      <div class="gauge-label">Remaining</div>
+      <div class="gauge-value"><span id="hud-dist">---</span><span class="gauge-unit">nm</span></div>
+    </div>
+  </div>
+</div>
 
 <div class="info-bar" id="info-bar">
   <span style="color:#888">Enter departure and arrival airports, then hit FLY</span>
@@ -307,7 +473,7 @@ let flightLayer = L.layerGroup().addTo(map);
 function toRad(d) { return d * Math.PI / 180; }
 function toDeg(r) { return r * 180 / Math.PI; }
 
-function greatCirclePoints(lat1, lon1, lat2, lon2, n = 100) {
+function greatCirclePoints(lat1, lon1, lat2, lon2, n = 200) {
   lat1 = toRad(lat1); lon1 = toRad(lon1);
   lat2 = toRad(lat2); lon2 = toRad(lon2);
   const d = 2 * Math.asin(Math.sqrt(
@@ -354,11 +520,11 @@ function splitAntimeridian(points) {
   return segments;
 }
 
-function createPlaneIcon() {
+function createRotatedPlaneIcon(heading) {
   return L.divIcon({
-    html: '<div class="plane-icon">&#9992;&#65039;</div>',
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    html: `<div style="font-size:28px; transform:rotate(${heading - 45}deg); filter:drop-shadow(0 0 8px rgba(0,210,255,0.9)); transition:transform 0.3s;">&#9992;&#65039;</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
     className: ''
   });
 }
@@ -381,7 +547,170 @@ function createAirportIcon(code) {
   });
 }
 
+function bearing(lat1, lon1, lat2, lon2) {
+  lat1 = toRad(lat1); lon1 = toRad(lon1);
+  lat2 = toRad(lat2); lon2 = toRad(lon2);
+  const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+// State
+let ptfsMode = false;
+let animationId = null;
+let simSpeed = 5;
+let currentFromCode = '';
+let currentToCode = '';
+
+const modeBtn = document.getElementById('mode-btn');
+modeBtn.addEventListener('click', () => {
+  ptfsMode = !ptfsMode;
+  modeBtn.textContent = ptfsMode ? 'PTFS MODE ON' : 'PTFS MODE';
+  modeBtn.classList.toggle('active', ptfsMode);
+  if (!ptfsMode) {
+    stopAnimation();
+    document.getElementById('ptfs-hud').classList.remove('active');
+    document.getElementById('progress-bar').classList.remove('active');
+  }
+});
+
+document.querySelectorAll('.speed-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    simSpeed = parseInt(btn.dataset.speed);
+  });
+});
+
+function stopAnimation() {
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+}
+
+function getFlightPhase(progress) {
+  if (progress < 0.02) return { name: 'TAKEOFF', class: 'phase-takeoff' };
+  if (progress < 0.12) return { name: 'CLIMB', class: 'phase-climb' };
+  if (progress < 0.85) return { name: 'CRUISE', class: 'phase-cruise' };
+  if (progress < 0.95) return { name: 'DESCENT', class: 'phase-descent' };
+  if (progress < 0.99) return { name: 'APPROACH', class: 'phase-approach' };
+  return { name: 'LANDED', class: 'phase-landed' };
+}
+
+function getAltitude(progress) {
+  if (progress < 0.02) return Math.round(progress / 0.02 * 5000);
+  if (progress < 0.12) return Math.round(5000 + ((progress - 0.02) / 0.10) * 31000);
+  if (progress < 0.85) return 36000;
+  if (progress < 0.95) return Math.round(36000 - ((progress - 0.85) / 0.10) * 30000);
+  if (progress < 0.99) return Math.round(6000 - ((progress - 0.95) / 0.04) * 5500);
+  return 0;
+}
+
+function getSpeed(progress) {
+  if (progress < 0.02) return Math.round(80 + (progress / 0.02) * 170);
+  if (progress < 0.12) return Math.round(250 + ((progress - 0.02) / 0.10) * 220);
+  if (progress < 0.85) return 470;
+  if (progress < 0.95) return Math.round(470 - ((progress - 0.85) / 0.10) * 200);
+  if (progress < 0.99) return Math.round(270 - ((progress - 0.95) / 0.04) * 130);
+  return 0;
+}
+
+function getVerticalSpeed(progress) {
+  if (progress < 0.02) return 3500;
+  if (progress < 0.12) return 2200;
+  if (progress < 0.85) return 0;
+  if (progress < 0.95) return -1800;
+  if (progress < 0.99) return -800;
+  return 0;
+}
+
+function runPTFS(points, totalKm, fromCode, toCode) {
+  const hud = document.getElementById('ptfs-hud');
+  const progressBar = document.getElementById('progress-bar');
+  hud.classList.add('active');
+  progressBar.classList.add('active');
+  document.getElementById('progress-route').innerHTML = `${fromCode} &rarr; ${toCode}`;
+
+  let planeMarker = null;
+  let trailLayer = L.layerGroup().addTo(flightLayer);
+  let progress = 0;
+  let lastTime = performance.now();
+  const totalNm = totalKm * 0.539957;
+
+  const baseDuration = Math.max(30, totalKm / 100);
+
+  function animate(now) {
+    const dt = (now - lastTime) / 1000;
+    lastTime = now;
+
+    const increment = (dt * simSpeed) / baseDuration;
+    progress = Math.min(progress + increment, 1);
+
+    const idx = Math.min(Math.floor(progress * (points.length - 1)), points.length - 2);
+    const frac = (progress * (points.length - 1)) - idx;
+    const lat = points[idx][0] + frac * (points[idx + 1][0] - points[idx][0]);
+    const lon = points[idx][1] + frac * (points[idx + 1][1] - points[idx][1]);
+
+    const hdg = bearing(points[idx][0], points[idx][1], points[Math.min(idx + 2, points.length - 1)][0], points[Math.min(idx + 2, points.length - 1)][1]);
+
+    if (planeMarker) {
+      planeMarker.setLatLng([lat, lon]);
+      planeMarker.setIcon(createRotatedPlaneIcon(hdg));
+    } else {
+      planeMarker = L.marker([lat, lon], { icon: createRotatedPlaneIcon(hdg), zIndexOffset: 1000 }).addTo(flightLayer);
+    }
+
+    if (idx > 0 && idx % 3 === 0) {
+      const trailPts = points.slice(0, idx + 1);
+      trailLayer.clearLayers();
+      const segs = splitAntimeridian(trailPts);
+      segs.forEach(seg => {
+        L.polyline(seg, { color: '#00ff88', weight: 2, opacity: 0.5 }).addTo(trailLayer);
+      });
+    }
+
+    map.panTo([lat, lon], { animate: true, duration: 0.3 });
+
+    const phase = getFlightPhase(progress);
+    const alt = getAltitude(progress);
+    const spd = getSpeed(progress);
+    const vs = getVerticalSpeed(progress);
+    const remaining = Math.round(totalNm * (1 - progress));
+
+    document.getElementById('hud-speed').textContent = spd;
+    document.getElementById('hud-alt').textContent = alt.toLocaleString();
+    document.getElementById('hud-hdg').textContent = Math.round(hdg).toString().padStart(3, '0');
+    document.getElementById('hud-vs').textContent = vs > 0 ? `+${vs}` : vs.toString();
+    document.getElementById('hud-dist').textContent = remaining.toLocaleString();
+    document.getElementById('hud-phase').innerHTML = `<span class="phase-badge ${phase.class}">${phase.name}</span>`;
+
+    const pct = Math.round(progress * 100);
+    document.getElementById('progress-pct').textContent = `${pct}%`;
+    document.getElementById('progress-fill').style.width = `${pct}%`;
+
+    if (progress < 1) {
+      animationId = requestAnimationFrame(animate);
+    } else {
+      document.getElementById('hud-speed').textContent = '0';
+      document.getElementById('hud-alt').textContent = '0';
+      document.getElementById('hud-vs').textContent = '0';
+      document.getElementById('hud-dist').textContent = '0';
+      document.getElementById('hud-phase').innerHTML = '<span class="phase-badge phase-landed">LANDED</span>';
+
+      document.getElementById('info-bar').innerHTML = `
+        <div class="info-item"><span class="info-value" style="color:#00e676">&#10003; LANDED at ${toCode}</span></div>
+        <div class="info-item"><span class="info-label">Distance</span><span class="info-value">${Math.round(totalKm).toLocaleString()} km</span></div>
+      `;
+    }
+  }
+
+  animationId = requestAnimationFrame(animate);
+}
+
 function fly() {
+  stopAnimation();
+
   const fromCode = document.getElementById('from').value.trim().toUpperCase();
   const toCode = document.getElementById('to').value.trim().toUpperCase();
 
@@ -402,31 +731,20 @@ function fly() {
     return;
   }
 
+  currentFromCode = fromCode;
+  currentToCode = toCode;
   flightLayer.clearLayers();
 
   const points = greatCirclePoints(from.lat, from.lon, to.lat, to.lon);
   const segments = splitAntimeridian(points);
 
   segments.forEach(seg => {
-    L.polyline(seg, {
-      color: '#00d2ff',
-      weight: 3,
-      opacity: 0.8,
-      dashArray: '10, 6'
-    }).addTo(flightLayer);
-
-    L.polyline(seg, {
-      color: '#7b2ff7',
-      weight: 1.5,
-      opacity: 0.4
-    }).addTo(flightLayer);
+    L.polyline(seg, { color: '#00d2ff', weight: 3, opacity: 0.8, dashArray: '10, 6' }).addTo(flightLayer);
+    L.polyline(seg, { color: '#7b2ff7', weight: 1.5, opacity: 0.4 }).addTo(flightLayer);
   });
 
   L.marker([from.lat, from.lon], { icon: createAirportIcon(fromCode) }).addTo(flightLayer);
   L.marker([to.lat, to.lon], { icon: createAirportIcon(toCode) }).addTo(flightLayer);
-
-  const midIdx = Math.floor(points.length / 2);
-  L.marker(points[midIdx], { icon: createPlaneIcon() }).addTo(flightLayer);
 
   const km = haversineKm(from.lat, from.lon, to.lat, to.lon);
   const miles = Math.round(km * 0.621371);
@@ -442,6 +760,17 @@ function fly() {
 
   const bounds = L.latLngBounds(points);
   map.fitBounds(bounds, { padding: [50, 50] });
+
+  if (ptfsMode) {
+    setTimeout(() => {
+      map.setZoom(6);
+      map.panTo([from.lat, from.lon]);
+      runPTFS(points, km, fromCode, toCode);
+    }, 800);
+  } else {
+    const midIdx = Math.floor(points.length / 2);
+    L.marker(points[midIdx], { icon: createRotatedPlaneIcon(bearing(points[midIdx][0], points[midIdx][1], points[midIdx+1][0], points[midIdx+1][1])) }).addTo(flightLayer);
+  }
 }
 
 // Autocomplete
@@ -466,7 +795,7 @@ function setupAutocomplete(inputId, listId) {
 
     if (matches.length === 0) { list.classList.remove('active'); return; }
 
-    matches.forEach(([code, a], i) => {
+    matches.forEach(([code, a]) => {
       const div = document.createElement('div');
       div.className = 'autocomplete-item';
       div.innerHTML = `<span class="code">${code}</span><span class="name">${a.name}, ${a.city}</span>`;
