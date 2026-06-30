@@ -849,11 +849,13 @@ function runPTFS(points, totalKm, fromCode, toCode) {
 
 function resolveAirport(input) {
   const val = input.toUpperCase();
-  if (AIRPORTS[val]) return { code: val, data: AIRPORTS[val] };
-  for (const [code, data] of Object.entries(AIRPORTS)) {
+  const pool = Object.entries(AIRPORTS).filter(([, a]) => !ptfsMode || a.country === 'PTFS');
+  const exact = pool.find(([code]) => code === val);
+  if (exact) return { code: exact[0], data: exact[1] };
+  for (const [code, data] of pool) {
     if (code.includes(val)) return { code, data };
   }
-  for (const [code, data] of Object.entries(AIRPORTS)) {
+  for (const [code, data] of pool) {
     if (data.city.toUpperCase().includes(val) || data.name.toUpperCase().includes(val)) return { code, data };
   }
   return null;
@@ -943,12 +945,13 @@ function setupAutocomplete(inputId, listId) {
     if (val.length === 0) { list.classList.remove('active'); return; }
 
     const matches = Object.entries(AIRPORTS)
-      .filter(([code, a]) =>
-        code.includes(val) ||
-        code.startsWith(val) ||
-        a.city.toUpperCase().includes(val) ||
-        a.name.toUpperCase().includes(val)
-      )
+      .filter(([code, a]) => {
+        if (ptfsMode && a.country !== 'PTFS') return false;
+        return code.includes(val) ||
+          code.startsWith(val) ||
+          a.city.toUpperCase().includes(val) ||
+          a.name.toUpperCase().includes(val);
+      })
       .slice(0, 8);
 
     if (matches.length === 0) { list.classList.remove('active'); return; }
