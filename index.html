@@ -853,6 +853,8 @@ modeBtn.addEventListener('click', () => {
   modeBtn.classList.toggle('active', ptfsMode);
   if (ptfsMode) {
     map.removeLayer(darkTile);
+    map.setMinZoom(3);
+    map.setMaxBounds([[-60, -80], [80, 150]]);
     buildPTFSIslands();
     ptfsCanvas.addTo(map);
     ptfsMarkerLayer.addTo(map);
@@ -861,6 +863,8 @@ modeBtn.addEventListener('click', () => {
   } else {
     stopAnimation();
     map.removeLayer(ptfsCanvas);
+    map.setMinZoom(2);
+    map.setMaxBounds(null);
     darkTile.addTo(map);
     map.removeLayer(ptfsMarkerLayer);
     document.getElementById('map').style.background = '#0a0a1a';
