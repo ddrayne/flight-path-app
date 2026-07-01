@@ -279,6 +279,7 @@ body {
   box-shadow: 0 2px 10px rgba(0,210,255,0.3) !important;
 }
 .ptfs-tooltip::before { border-top-color: #00d2ff !important; }
+.ptfs-svg-overlay { clip-path: inset(0 46% 0 0); }
 
 @media (max-width: 700px) {
   .header {
@@ -699,7 +700,7 @@ function buildPTFSIslands() {
   L.rectangle([[-90, -360], [90, 360]], {
     color: 'none', weight: 0, fillColor: '#0a1628', fillOpacity: 1
   }).addTo(ptfsCanvas);
-  L.imageOverlay('ptfs-map.svg', PTFS_MAP_BOUNDS, { opacity: 0.85 }).addTo(ptfsCanvas);
+  const svgOverlay = L.imageOverlay('ptfs-map.svg', PTFS_MAP_BOUNDS, { opacity: 0.85, className: 'ptfs-svg-overlay' }).addTo(ptfsCanvas);
 }
 darkTile.addTo(map);
 
